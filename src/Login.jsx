@@ -3,6 +3,8 @@ import "bootstrap/dist/css/bootstrap.min.css";
 // import Invoice from "./Invoice";
 import './App.css'
 import { useNavigate } from "react-router-dom";
+import God from "./assets/krishnaa.png"
+import Swal from "sweetalert2";
 
 const Login = () => {
   const [credentials, setCredentials] = useState({ username: "", password: "" });
@@ -16,13 +18,34 @@ const Login = () => {
   };
 
   // Handle login
+  // const handleLogin = () => {
+  //   const { username, password } = credentials;
+  //   if (username === "admin" && password === "sahu123") {
+  //     // setIsLoggedIn(true);
+  //     navigate('/invoice')
+  //   } else {
+  //     alert("Invalid Username or Password!");
+  //   }
+  // };
+
   const handleLogin = () => {
     const { username, password } = credentials;
     if (username === "admin" && password === "sahu123") {
-      // setIsLoggedIn(true);
-      navigate('/invoice')
+      Swal.fire({
+        icon: "success",
+        title: "Login Successful",
+        text: "Welcome to the Invoice Management System!",
+        timer: 2000, // Auto close after 2 seconds
+        showConfirmButton: false,
+      }).then(() => {
+        navigate("/invoice"); // Redirect after alert closes
+      });
     } else {
-      alert("Invalid Username or Password!");
+      Swal.fire({
+        icon: "error",
+        title: "Login Failed",
+        text: "Invalid Username or Password!",
+      });
     }
   };
 
@@ -32,7 +55,10 @@ const Login = () => {
   console.log(isLoggedIn, '---- isLoggedIn')
 
   return (
-    <div className="d-flex brand-logo justify-content-center align-items-center vh-100 bg-light">
+    <div className="d-flex brand-logo justify-content-center align-items-center vh-100 bg-light" style={{ position: "relative" }}>
+      <div style={{ position: 'fixed', top: "20px", width:"158px", height:"158px" }}>
+        <img src={God} width='100%' height="100%" style={{borderRadius:"74px"}} />
+      </div>
       <div className="card shadow p-4" style={{ width: "400px" }}>
         <h3 className="text-center mb-4">Login</h3>
         <div className="mb-3">

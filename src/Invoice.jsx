@@ -4,6 +4,7 @@ import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { useNavigate } from 'react-router-dom'
 import radha from './assets/radha.png'
 import jsPDF from "jspdf";
+import Swal from "sweetalert2";
 
 const Invoice = () => {
     const [customer, setCustomer] = useState({
@@ -14,26 +15,26 @@ const Invoice = () => {
     });
     const [items, setItems] = useState([
         {
-            itemName: "",
-            goldRate: 0,
-            netWeight: 0,
-            grossWeight: 0,
-            makingCharge: 0,
-            additionalCost: 0,
-            total: 0,
-            calculatedGoldPrice: 0
+            itemName: '',
+            goldRate: '',
+            netWeight: '',
+            grossWeight: '',
+            makingCharge: '',
+            additionalCost: '',
+            total: '',
+            calculatedGoldPrice: '' ,
         },
     ]);
 
     const [oldGoldItems, setOldGoldItems] = useState([
-        { slNo: 1, itemName: "", goldRate: 0, weight: 0, tunchPercentage: 100, total: 0 },
+        { slNo: 1, itemName: "", goldRate: "", weight: "", tunchPercentage: 100, total: "" },
     ]);
 
     const [summary, setSummary] = useState({
-        purchaseGold: 0,
-        sellGold: 0,
-        tax: 0,
-        finalTotal: 0,
+        purchaseGold: '',
+        sellGold: '',
+        tax: '',
+        finalTotal: '',
     });
 
     const [invoiceNumber, setInvoiceNumber] = useState(null);
@@ -54,34 +55,35 @@ const Invoice = () => {
 
     const handleItemChange = (index, field, value) => {
         const updatedItems = [...items];
-    
+
+        console.log(index, field, value)
+
+
         // Update the field value
         updatedItems[index][field] =
+            // ["goldRate", "netWeight", "grossWeight", "makingCharge", "additionalCost", "makingChargePerGram"].includes(field) && Number(value);
             ["goldRate", "netWeight", "grossWeight", "makingCharge", "additionalCost", "makingChargePerGram"].includes(field)
-                ? +value
-                : value;
-    
+        ? Number(value)
+        : value;
+
         // Calculate the calculatedGoldPrice (Gold Rate * Net Weight)
         updatedItems[index].calculatedGoldPrice = updatedItems[index].goldRate * updatedItems[index].netWeight;
-    
-        // Calculate the making charge if 'makingChargePerGram' is updated
-        if (field === "makingChargePerGram") {
+
+        // Recalculate making charge if either 'makingChargePerGram' or 'netWeight' is updated
+        if (field === "makingChargePerGram" || field === "netWeight") {
             updatedItems[index].makingCharge = updatedItems[index].makingChargePerGram * updatedItems[index].netWeight;
         }
-    
+
         // Calculate the total for the item
         updatedItems[index].total =
             updatedItems[index].calculatedGoldPrice +
             updatedItems[index].makingCharge +
             updatedItems[index].additionalCost;
-    
+
         // Update state and summary
         setItems(updatedItems);
         updateSummary(updatedItems, oldGoldItems);
     };
-    
-
-
 
     // Handle old gold item changes
     const handleOldGoldChange = (index, field, value) => {
@@ -112,39 +114,61 @@ const Invoice = () => {
             ...prev,
             {
                 itemName: "",
-                goldRate: 0,
-                netWeight: 0,
-                grossWeight: 0,
-                makingCharge: 0,
-                additionalCost: 0,
-                total: 0,
+                goldRate: '',
+                netWeight: '',
+                grossWeight: '',
+                makingCharge: '',
+                additionalCost: '',
+                total: '',
             },
         ]);
     };
 
-    const [cgst, setCgst] = useState(0); // CGST (default 0)
-    const [sgst, setSgst] = useState(0); // SGST (default 0)
+    const [cgst, setCgst] = useState('');
+    const [sgst, setSgst] = useState('');
 
+
+    // const updateSummary = (items, oldGoldItems) => {
+    //     // const purchaseGold = items.reduce((acc, item) => acc + item.total, '');
+    //     const purchaseGold = items.reduce((acc, item) => acc + Number(item.total || 0), 0.toFixed(2));
+    //     const sellGold = oldGoldItems.reduce((acc, item) => acc + item.total, 0);
+    //     const cgstAmount = cgst > 0 ? Number(purchaseGold * (cgst / 100)) : 0;
+    //     const sgstAmount = sgst > 0 ? Number(purchaseGold * (sgst / 100)) : 0;
+
+    //     const totalWithTax = Number(purchaseGold || 0) + cgstAmount + sgstAmount;
+    //     console.log(totalWithTax, '---totalWithTax')
+
+    //     const finalTotal =  sellGold ? Number(totalWithTax - sellGold) : totalWithTax;
+
+    //     console.log(purchaseGold, '----- purchaseGold')
+    //     setSummary({
+    //         purchaseGold: purchaseGold || '',
+    //         sellGold: sellGold || '',
+    //         cgst: cgstAmount,
+    //         sgst: sgstAmount,
+    //         totalWithTax,
+    //         finalTotal,
+    //     });
+    // };
 
     const updateSummary = (items, oldGoldItems) => {
-        const purchaseGold = items.reduce((acc, item) => acc + item.total, 0);
-        const sellGold = oldGoldItems.reduce((acc, item) => acc + item.total, 0);
-        const cgstAmount = cgst > 0 ? purchaseGold * (cgst / 100) : 0; // CGST calculation
-        const sgstAmount = sgst > 0 ? purchaseGold * (sgst / 100) : 0; // SGST calculation
-
-        const totalWithTax = purchaseGold + cgstAmount + sgstAmount; // Total with tax
-        const finalTotal = totalWithTax - sellGold; // Final total subtracting sellGold
-
+        const purchaseGold = Number(items.reduce((acc, item) => acc + Number(item.total || 0), 0).toFixed(2));
+        const sellGold = Number(oldGoldItems.reduce((acc, item) => acc + Number(item.total || 0), 0).toFixed(2));
+        const cgstAmount = cgst > 0 ? Number((purchaseGold * (cgst / 100)).toFixed(2)) : 0;
+        const sgstAmount = sgst > 0 ? Number((purchaseGold * (sgst / 100)).toFixed(2)) : 0;
+    
+        const totalWithTax = Number((purchaseGold + cgstAmount + sgstAmount).toFixed(2));
+        const finalTotal = sellGold ? Number((totalWithTax - sellGold).toFixed(2)) : totalWithTax;
+    
         setSummary({
             purchaseGold,
             sellGold,
             cgst: cgstAmount,
             sgst: sgstAmount,
-            totalWithTax, // Store this separately
-            finalTotal,   // Final amount displayed
+            totalWithTax,
+            finalTotal,
         });
     };
-
     useEffect(() => {
         updateSummary(items, oldGoldItems);
     }, [items, oldGoldItems, cgst, sgst]);
@@ -156,72 +180,59 @@ const Invoice = () => {
         setIsOldGoldOpen((prev) => !prev);
     };
 
-    // Generate Bill (for demo purposes)
-
-
-    // const generateBill = () => {
-    //     const doc = new jsPDF();
-
-    //     const x1 = 10;  // X position for the Invoice Number
-    //     const x2 = 150; // X position for the Date (adjust based on your page width)
-
-    //     doc.text(`Invoice Number: ${invoiceNumber}`, x1, 10);
-    //     doc.text(`Date: ${currentDate}`, x2, 10);
-
-    //     doc.text("Customer Details:", 10, 30);
-    //     doc.text(`Name: ${customer.name}`, 10, 40);
-    //     doc.text(`Contact: ${customer.contact}`, 10, 50);
-    //     doc.text(`Alternate Contact: ${customer.alternateContact}`, 10, 60);
-    //     doc.text(`Address: ${customer.address}`, 10, 70);
-
-    //     doc.text("New Gold Purchase:", 10, 80);
-    //     items.forEach((item, index) => {
-    //         doc.text(
-    //             `Item ${index + 1}: ${item.itemName}, Gold Rate: ${item.goldRate}, Net Weight: ${item.netWeight
-    //             }, Gross Weight: ${item.grossWeight}, Making Charge: ${item.makingCharge}, Additional Cost: ${item.additionalCost
-    //             }, Total: ${item.total.toFixed(2)}`,
-    //             10,
-    //             90 + index * 10
-    //         );
-    //     });
-
-    //     doc.text("Invoice Summary:", 10, 140);
-    //     doc.text(`Purchase Gold: ${summary.purchaseGold.toFixed(2)}`, 10, 150);
-    //     doc.text(`Sell Gold: ${summary.sellGold.toFixed(2)}`, 10, 160);
-    //     doc.text(`Tax: ${summary.tax.toFixed(2)}`, 10, 170);
-    //     doc.text(`Final Total: ${summary.finalTotal.toFixed(2)}`, 10, 180);
-
-    //     // Save the PDF
-    //     doc.save(`Invoice_${invoiceNumber}.pdf`);
-
-    //     alert("PDF Invoice downloaded successfully!");
-    // };
-
     const navigate = useNavigate()
 
     const handleLogout = () => {
-        console.log('hello')
-        navigate('/')
+        Swal.fire({
+            title: "Are you sure?",
+            text: "You will be logged out!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Yes, logout",
+            cancelButtonText: "Cancel",
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    position: "center",
+                    icon: "success",
+                    title: "Logged out successfully",
+                    showConfirmButton: false,
+                    timer: 1500,
+                });
+                navigate("/");
+            }
+        });
     };
+
+    const calculateTotalWithTax = () => {
+        const purchaseGold = Number(summary.purchaseGold);
+        const cgstAmount = Number((purchaseGold * cgst) / 100);
+        const sgstAmount = Number((purchaseGold * sgst) / 100);
+        const totalWithTax = Number(purchaseGold + cgstAmount + sgstAmount);
+
+        return totalWithTax?.toString();
+
+    };
+
 
     const generateBill = () => {
         const doc = new jsPDF();
-    
+
         const x1 = 10;  // X position for the Invoice Number
         const x2 = 150; // X position for the Date (adjust based on your page width)
         const yStart = 10;  // Starting Y position
         const lineHeight = 10;  // Line height for text
-    
+
         doc.text(`Invoice Number: ${invoiceNumber}`, x1, yStart);
         doc.text(`Date: ${currentDate}`, x2, yStart);
-    
+
         let yPosition = 30;
         doc.text("Customer Details:", 10, yPosition);
         doc.text(`Name: ${customer.name}`, 10, yPosition + lineHeight);
         doc.text(`Contact: ${customer.contact}`, 10, yPosition + 2 * lineHeight);
         doc.text(`Alternate Contact: ${customer.alternateContact}`, 10, yPosition + 3 * lineHeight);
         doc.text(`Address: ${customer.address}`, 10, yPosition + 4 * lineHeight);
-    
+
         yPosition += 40;
         doc.text("New Gold Purchase:", 10, yPosition);
         items.forEach((item, index) => {
@@ -229,40 +240,29 @@ const Invoice = () => {
             doc.text(
                 `Item ${index + 1}: ${item.itemName}, Gold Rate: ${item.goldRate}, Net Weight: ${item.netWeight
                 }, Gross Weight: ${item.grossWeight}, Making Charge: ${item.makingCharge}, Additional Cost: ${item.additionalCost
-                }, Total: ${item.total.toFixed(2)}`,
+                }, Total: ${item.total}`,
                 10,
                 yPosition
             );
         });
-    
+
         yPosition += 40;
         doc.text("Invoice Summary:", 10, yPosition);
-        doc.text(`Purchase Gold: ${summary.purchaseGold.toFixed(2)}`, 10, yPosition + lineHeight);
-        doc.text(`Sell Gold: ${summary.sellGold.toFixed(2)}`, 10, yPosition + 2 * lineHeight);
-        doc.text(`Tax: ${summary.tax.toFixed(2)}`, 10, yPosition + 3 * lineHeight);
-        doc.text(`Final Total: ${summary.finalTotal.toFixed(2)}`, 10, yPosition + 4 * lineHeight);
-    
+        doc.text(`Purchase Gold: ${summary.purchaseGold}`, 10, yPosition + lineHeight);
+        doc.text(`Sell Gold: ${summary.sellGold}`, 10, yPosition + 2 * lineHeight);
+        doc.text(`Tax: ${summary.tax}`, 10, yPosition + 3 * lineHeight);
+        doc.text(`Final Total: ${summary.finalTotal}`, 10, yPosition + 4 * lineHeight);
+
         // Save the PDF
         doc.save(`Invoice_${invoiceNumber}.pdf`);
-    
+
         alert("PDF Invoice downloaded successfully!");
-    };
-
-
-    const calculateTotalWithTax = () => {
-        const purchaseGold = summary.purchaseGold;
-        const cgstAmount = (purchaseGold * cgst) / 100;
-        const sgstAmount = (purchaseGold * sgst) / 100;
-        const totalWithTax = purchaseGold + cgstAmount + sgstAmount;
-
-        return totalWithTax.toFixed(2);
-
     };
 
     return (
         <div style={{ margin: "10px 20px" }}>
 
-            <div className="d-flex justify-content-between">
+            <div className="d-flex flex-wrap gap-3 justify-content-between">
                 <img src={radha} />
                 <button className="btn btn-danger" onClick={handleLogout}>
                     Logout
@@ -314,10 +314,10 @@ const Invoice = () => {
                         <div className="col-md-4 mb-3">
                             <label className="form-label">Contact Number</label>
                             <input
-                                type="text"
+                                type="number"
                                 className="form-control"
                                 name="contact"
-                                value={customer.contact}
+                                value={customer.contact.toString()}
                                 onChange={handleCustomerChange}
                                 placeholder="Enter contact number"
                             />
@@ -325,10 +325,10 @@ const Invoice = () => {
                         <div className="col-md-4 mb-3">
                             <label className="form-label">Alternate Contact Number</label>
                             <input
-                                type="text"
+                                type="number"
                                 className="form-control"
                                 name="alternateContact"
-                                value={customer.alternateContact}
+                                value={customer.alternateContact.toString()}
                                 onChange={handleCustomerChange}
                                 placeholder="Enter alternate contact number"
                             />
@@ -349,171 +349,58 @@ const Invoice = () => {
             </div>
 
             {/* New Gold Purchase Section */}
-            {/* <div className="card mt-4">
-                <div className="card-header bg-success text-white">New Gold Purchase</div>
-                <div className="card-body">
-                    <table className="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Sl. No</th>
-                                <th>Item Name</th>
-                                <th>Gold Rate</th>
-                                <th>Net Weight (gms)</th>
-                                <th>Gross Weight (gms)</th>
-                                <th>Per Gram Making Charge</th>
-                                <th>Total Making Charge</th>
-                                <th>Additional Cost</th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {items.map((item, index) => (
-                                <tr key={index}>
-                                    <td>{index + 1}</td>
-                                    <td>
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            value={item.itemName}
-                                            onChange={(e) =>
-                                                handleItemChange(index, "itemName", e.target.value)
-                                            }
-                                            placeholder="Item Name"
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            className="form-control"
-                                            value={item.goldRate}
-                                            onChange={(e) =>
-                                                handleItemChange(index, "goldRate", e.target.value)
-                                            }
-                                            placeholder="Gold Rate"
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            className="form-control"
-                                            value={item.netWeight}
-                                            onChange={(e) =>
-                                                handleItemChange(index, "netWeight", e.target.value)
-                                            }
-                                            placeholder="Net Weight"
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            className="form-control"
-                                            value={item.grossWeight}
-                                            onChange={(e) =>
-                                                handleItemChange(index, "grossWeight", e.target.value)
-                                            }
-                                            placeholder="Gross Weight"
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            className="form-control"
-                                            value={item.makingChargePerGram}
-                                            onChange={(e) =>
-                                                handleItemChange(index, "makingChargePerGram", e.target.value)
-                                            }
-                                            placeholder="Per Gram Making Charge"
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            value={item.makingCharge.toFixed(2)}
-                                            readOnly
-                                            placeholder="Total Making Charge"
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            className="form-control"
-                                            value={item.additionalCost}
-                                            onChange={(e) =>
-                                                handleItemChange(index, "additionalCost", e.target.value)
-                                            }
-                                            placeholder="Additional Cost"
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            value={item.total.toFixed(2)}
-                                            readOnly
-                                            placeholder="Total"
-                                        />
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    <button className="btn btn-secondary" onClick={addItemRow}>
-                        Add New Item
-                    </button>
-                </div>
-            </div> */}
 
             <div className="card mt-4">
                 <div className="card-header bg-success text-white">New Gold Purchase</div>
                 <div className="card-body">
-                    <table className="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Sl. No</th>
-                                <th>Item Name</th>
-                                <th>Gold Rate</th>
-                                <th>Net Weight (gms)</th>
-                                {/* <th>Total Gold Price</th>  */}
-                                {/* <th>Gross Weight (gms)</th> */}
-                                <th>Per Gram Making Charge</th>
-                                <th>Total Making Charge</th>
-                                <th>Total Gold Price</th>
-                                <th>Additional Cost</th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {items.map((item, index) => (
-                                <tr key={index}>
-                                    <td>{index + 1}</td>
-                                    <td>
-                                        <input type="text" className="form-control" value={item.itemName} onChange={(e) => handleItemChange(index, "itemName", e.target.value)} placeholder="Item Name" />
-                                    </td>
-                                    <td>
-                                        <input type="number" className="form-control" value={item.goldRate} onChange={(e) => handleItemChange(index, "goldRate", e.target.value)} placeholder="Gold Rate" />
-                                    </td>
-                                    <td>
-                                        <input type="number" className="form-control" value={item.netWeight} onChange={(e) => handleItemChange(index, "netWeight", e.target.value)} placeholder="Net Weight" />
-                                    </td>
-                                    {/* Other existing fields */}
-                                    {/* <td><input type="number" className="form-control" value={item.grossWeight} onChange={(e) => handleItemChange(index, "grossWeight", e.target.value)} placeholder="Gross Weight" /></td> */}
-                                    <td><input type="number" className="form-control" value={item.makingChargePerGram} onChange={(e) => handleItemChange(index, "makingChargePerGram", e.target.value)} placeholder="Per Gram Making Charge" /></td>
-                                    <td><input type="text" className="form-control" value={item.makingCharge.toFixed(2)} readOnly placeholder="Total Making Charge" /></td>
-                                    <td>
-                                        <input type="text" className="form-control" value={item.calculatedGoldPrice.toFixed(2)} readOnly placeholder="Calculated Gold Price" /> {/* New Input Field */}
-                                    </td>
-                                    <td><input type="number" className="form-control" value={item.additionalCost} onChange={(e) => handleItemChange(index, "additionalCost", e.target.value)} placeholder="Additional Cost" /></td>
-                                    <td><input type="text" className="form-control" value={item.total.toFixed(2)} readOnly placeholder="Total" /></td>
+                    <div className="invoice-table table-responsive">
+                        <table className="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Sl. No</th>
+                                    <th width="200">Item Name</th>
+                                    <th>Gold Rate</th>
+                                    <th>Net Weight (gms)</th>
+                                    {/* <th>Total Gold Price</th>  */}
+                                    {/* <th>Gross Weight (gms)</th> */}
+                                    <th>Per Gram Making Charge</th>
+                                    <th>Total Making Charge</th>
+                                    <th>Total Gold Price</th>
+                                    <th>Additional Cost</th>
+                                    <th>Total</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {items.map((item, index) => (
+                                    <tr key={index}>
+                                        <td>{index + 1}</td>
+                                        <td>
+                                            <input type="text" className="form-control" value={item.itemName} onChange={(e) => handleItemChange(index, "itemName", e.target.value)} placeholder="Item Name" />
+                                        </td>
+                                        <td>
+                                            <input type="number" className="form-control" value={item.goldRate.toString()} onChange={(e) => handleItemChange(index, "goldRate", e.target.value)} placeholder="Gold Rate" />
+                                        </td>
+                                        <td>
+                                            <input type="number" className="form-control" value={item.netWeight.toString()} onChange={(e) => handleItemChange(index, "netWeight", e.target.value)} placeholder="Net Weight" />
+                                        </td>
+                                        {/* Other existing fields */}
+                                        {/* <td><input type="number" className="form-control" value={item.grossWeight} onChange={(e) => handleItemChange(index, "grossWeight", e.target.value)} placeholder="Gross Weight" /></td> */}
+                                        <td><input type="number" className="form-control" value={item.makingChargePerGram?.toString()} onChange={(e) => handleItemChange(index, "makingChargePerGram", e.target.value)} placeholder="Per Gram Making Charge" /></td>
+                                        <td><input type="text" className="form-control" value={item.makingCharge} readOnly placeholder="Total Making Charge" /></td>
+                                        <td>
+                                            <input type="text" className="form-control" value={Number(item.calculatedGoldPrice)?.toFixed(2)} readOnly placeholder="Calculated Gold Price" />
+                                        </td>
+                                        <td><input type="text" className="form-control" value={item.additionalCost} onChange={(e) => handleItemChange(index, "additionalCost", e.target.value)} placeholder="Additional Cost" /></td>
+                                        <td><input type="text" className="form-control" value={item.total} readOnly placeholder="Total" /></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                     {/* Button to add new item */}
                     <button className="btn btn-secondary" onClick={addItemRow}> Add New Item </button>
                 </div>
             </div>
-
 
             {/* Old Gold Section */}
             <div className="card mt-4">
@@ -527,6 +414,7 @@ const Invoice = () => {
                     className={`card-body collapse ${isOldGoldOpen ? "show" : ""}`}
                     style={{ transition: "height 0.3s ease" }}
                 >
+                    <div className="table-responsive gold-section-tbl">
                     <table className="table table-bordered">
                         <thead>
                             <tr>
@@ -557,7 +445,7 @@ const Invoice = () => {
                                         <input
                                             type="number"
                                             className="form-control"
-                                            value={item.goldRate}
+                                            value={item.goldRate?.toString()}
                                             onChange={(e) =>
                                                 handleOldGoldChange(index, "goldRate", e.target.value)
                                             }
@@ -568,7 +456,7 @@ const Invoice = () => {
                                         <input
                                             type="number"
                                             className="form-control"
-                                            value={item.weight}
+                                            value={item.weight.toString()}
                                             onChange={(e) =>
                                                 handleOldGoldChange(index, "weight", e.target.value)
                                             }
@@ -579,7 +467,7 @@ const Invoice = () => {
                                         <input
                                             type="number"
                                             className="form-control"
-                                            value={item.tunchPercentage}
+                                            value={item.tunchPercentage.toString()}
                                             onChange={(e) =>
                                                 handleOldGoldChange(index, "tunchPercentage", e.target.value)
                                             }
@@ -590,7 +478,7 @@ const Invoice = () => {
                                         <input
                                             type="text"
                                             className="form-control"
-                                            value={item.total.toFixed(2)}
+                                            value={item.total.toString()}
                                             readOnly
                                             placeholder="Total"
                                         />
@@ -599,6 +487,7 @@ const Invoice = () => {
                             ))}
                         </tbody>
                     </table>
+                    </div>
                     <button className="btn btn-secondary" onClick={addOldGoldRow}>
                         Add Old Gold Item
                     </button>
@@ -616,9 +505,9 @@ const Invoice = () => {
                                 <div className="col-md-4 mb-3">
                                     <label className="form-label">Purchase Gold</label>
                                     <input
-                                        type="text"
+                                        type="number"
                                         className="form-control"
-                                        value={summary.purchaseGold.toFixed(2)}
+                                        value={summary.purchaseGold.toString()}
                                         readOnly
                                     />
                                 </div>
@@ -627,7 +516,7 @@ const Invoice = () => {
                                     <input
                                         type="number"
                                         className="form-control"
-                                        value={cgst}
+                                        value={cgst.toString()}
                                         onChange={(e) => setCgst(+e.target.value)}
                                         placeholder="Enter CGST"
                                     />
@@ -637,7 +526,7 @@ const Invoice = () => {
                                     <input
                                         type="number"
                                         className="form-control"
-                                        value={sgst}
+                                        value={sgst.toString()}
                                         onChange={(e) => setSgst(+e.target.value)}
                                         placeholder="Enter SGST"
                                     />
@@ -645,7 +534,7 @@ const Invoice = () => {
                                 <div className="col-md-4 mb-3">
                                     <label className="form-label">Total Amount (with Tax)</label>
                                     <input
-                                        type="text"
+                                        type="number"
                                         className="form-control"
                                         value={calculateTotalWithTax()}
                                         readOnly
@@ -653,14 +542,14 @@ const Invoice = () => {
                                 </div>
                             </div>
 
-                            
+
                             <div className="row">
                                 <div className="col-md-4 mb-3">
                                     <label className="form-label">Sell Old Gold</label>
                                     <input
                                         type="text"
                                         className="form-control"
-                                        value={summary.sellGold.toFixed(2)}
+                                        value={Number(summary.sellGold)}
                                         readOnly
                                     />
                                 </div>
@@ -669,7 +558,7 @@ const Invoice = () => {
                                     <input
                                         type="text"
                                         className="form-control"
-                                        value={summary.finalTotal.toFixed(2)}
+                                        value={summary.finalTotal}
                                         readOnly
                                     />
                                 </div>
@@ -683,7 +572,6 @@ const Invoice = () => {
                     </button>
                 </div>
             </div>
-
         </div>
     );
 };
